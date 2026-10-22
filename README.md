@@ -8,6 +8,21 @@ This is an independent project, not affiliated with, endorsed by, or supported b
 
 All rigs and presets are preserved. Deleting unused resources requires separate confirmation for each category and is permanent, with no automatic backup.
 
+## Current features
+
+| Feature | Current behavior |
+| --- | --- |
+| Unused resource detection | Recursively finds unreferenced `.wav` IRs, `.ac` Amp Clones, and `.nam` Neural Amp Modeler models. The NAM library is optional. |
+| Rig and preset protection | Reads every `.rig` and every saved preset in `Blocks`, including hidden subfolders, and retains their recognized resource references. Setlist membership does not affect protection. |
+| Scene references | Reads nested objects, arrays, and serialized JSON strings, including scenes and references outside `content`. |
+| Interactive cleanup | Shows candidate paths and counts, refreshes the plan for each category, and requires a separate Italian yes/no confirmation. |
+| Change detection | Rechecks dependencies, candidate lists, file contents, and resolved candidate paths before removal. |
+| Protected libraries | Excludes `Impulse Responses/HeadRush`, `Impulse Responses/Choptones`, and `Amp Clones/HeadRush`. |
+| Empty-folder cleanup | Removes empty non-hidden subfolders after a category successfully deletes files, while retaining protected folders and library roots. |
+| Launch options | Runs directly with Node.js, through `start.sh` or `npm start`, or with Docker Compose. Supports an explicit device or working-copy path through `--data`. |
+
+The utility does not delete rigs, saved block presets, setlists, SuperClones, or resource files with other extensions. It does not inspect binary `.ac` or `.sc` contents for embedded dependencies; see [Checks](#checks) for matching rules and limitations.
+
 ## Before you begin
 
 **Create a complete manual backup of the device's contents and verify that the copy is readable before using the utility.** Keep the backup in a separate folder from the one you intend to clean.
@@ -19,8 +34,8 @@ For an initial trial, use `--data` with a working copy of the device's contents,
 Requires Node.js 22 or later and read/write access to the device folder. No npm packages or Docker are required: there is no need to run `npm install`.
 
 ```sh
-git clone https://github.com/dfeltrin/HeadrushCleaner.git
-cd HeadrushCleaner
+git clone https://github.com/dfeltrin/headrush-cleaner.git
+cd headrush-cleaner
 node --version
 ```
 
@@ -92,6 +107,24 @@ node cleaner.js --data "/path/to/device" < /dev/null
 ```
 
 The initial plan lists candidate paths and file counts, not disk-space estimates. Candidate contents are hashed only when their category is reached, so generating the initial plan does not read every unused model in full.
+
+For example, a device with one unused resource in each category produces an initial plan like this (paths and counts depend on your files):
+
+```text
+Directory: /Volumes/HeadRush
+Piano di cancellazione:
+Impulse Responses: 1 file
+- Impulse Responses/User/Unused Cab.wav
+Amp Clones: 1 file
+- Amp Clones/User/Unused Amp.ac
+Neural Amp Modeler (.nam): 1 file
+- Neural Amp Modeler/User/Unused Model.nam
+Attenzione: cancellazione definitiva, senza backup.
+```
+
+The next step refreshes the IR plan and asks `Impulse Responses: vuoi cancellare definitivamente 1 file? [s/N]`. Replying `n` keeps those IRs and continues to the Amp Clones category, then to NAM models. Confirming one category does not authorize deletion in another.
+
+The process exits with status `0` after a completed run, when there are no candidates, or when input ends. Invalid arguments, analysis failures, and deletion errors exit with status `1`. A successful exit alone does not mean any files were deleted; check the per-category messages.
 
 ## Deletion
 
